@@ -1,0 +1,10 @@
+/* Client/src/index.css */
+/* You can add any global CSS here, or leave it empty if Tailwind handles everything. */
+/* For example, to ensure full height for the app: */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
