@@ -1,9 +1,386 @@
-// TradeNexus/Client/src/components/TrendingSectorsDisplay.jsx
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { ArrowUp, ArrowDown, RefreshCw, AlertCircle } from "lucide-react";
+import {
+  FaArrowUp,
+  FaArrowDown,
+  FaSyncAlt,
+  FaExclamationCircle,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+
+// Inject Orbitron font and futuristic neon CSS theme
+if (typeof document !== "undefined") {
+  const font = document.createElement("link");
+  font.href =
+    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap";
+  font.rel = "stylesheet";
+  document.head.appendChild(font);
+
+  const style = document.createElement("style");
+  style.innerHTML = `
+:root {
+  --primary-bg: #0b0f18;
+  --secondary-bg: #1a1f2d;
+  --header-bg: linear-gradient(90deg, #0d0338, #2e0064, #7b00ff);
+  --highlight-color: #00f0ff;
+  --button-gradient: linear-gradient(90deg, #7200ca, #00f0ff);
+  --alert-gradient: linear-gradient(90deg, #ff2e63, #ff00a6);
+  --text-color: #e0e0e0;
+  --transition-duration: 0.4s;
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-emphasized: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --border-radius: 12px;
+  --box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.6);
+  --neon-glow: 0px 0px 20px rgba(0, 255, 255, 0.8);
+  --pulse-glow: 0px 0px 25px rgba(0, 255, 255, 1),
+    0px 0px 35px rgba(255, 0, 255, 1);
+}
+
+body {
+  font-family: "Orbitron", sans-serif;
+  color: var(--text-color);
+  background: linear-gradient(
+    135deg,
+    #0b0f18 20%,
+    #1f002e 40%,
+    #001e32 70%,
+    #0d0338 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 8s ease infinite;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.tsd-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.tsd-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+}
+
+.tsd-btn {
+  background: var(--button-gradient);
+  color: #fff;
+  font-weight: bold;
+  padding: 12px 25px;
+  font-size: 1rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.4s, transform 0.3s, box-shadow 0.3s;
+  box-shadow: var(--neon-glow);
+  font-family: "Orbitron", sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.tsd-btn:hover {
+  background-color: #005a5a;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: var(--pulse-glow);
+}
+
+.tsd-title {
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--highlight-color);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: neonText 2s ease-in-out infinite alternate;
+}
+
+@keyframes neonText {
+  from {
+    text-shadow: 0px 0px 10px rgba(0, 255, 255, 0.7),
+      0px 0px 20px rgba(255, 0, 255, 0.5);
+  }
+  to {
+    text-shadow: 0px 0px 15px rgba(0, 255, 255, 1),
+      0px 0px 30px rgba(255, 0, 255, 1);
+  }
+}
+
+.tsd-title .accent {
+  color: #ff007a;
+}
+
+.tsd-sort-row {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.tsd-sort-btn {
+  background: rgba(25, 25, 60, 0.95);
+  color: var(--text-color);
+  border: 1px solid rgba(123, 0, 255, 0.3);
+  border-radius: var(--border-radius);
+  padding: 12px 25px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: "Orbitron", sans-serif;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.tsd-sort-btn.active,
+.tsd-sort-btn:hover {
+  background: var(--button-gradient);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: var(--pulse-glow);
+}
+
+.tsd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.tsd-card {
+  background: rgba(25, 25, 60, 0.95);
+  border-radius: var(--border-radius);
+  box-shadow: 0 0 15px rgba(0, 0, 255, 0.5);
+  border: 1px solid rgba(123, 0, 255, 0.3);
+  transition: transform 0.4s var(--easing-standard),
+    box-shadow 0.4s var(--easing-standard);
+  cursor: pointer;
+  padding: 2rem;
+  text-align: center;
+  animation: sectionPulse 3s ease-in-out infinite alternate;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes sectionPulse {
+  0% {
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(0, 255, 255, 1);
+  }
+}
+
+.tsd-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75px;
+  width: 50px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: skewX(-45deg);
+  transition: left 0.5s ease;
+}
+
+.tsd-card:hover::before {
+  left: 100%;
+}
+
+.tsd-card:hover {
+  transform: scale(1.05);
+  box-shadow: var(--pulse-glow);
+}
+
+.tsd-sector-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--highlight-color);
+  margin-bottom: 1rem;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+  animation: neonText 2s ease-in-out infinite alternate;
+}
+
+.tsd-card:hover .tsd-sector-title {
+  color: #ff007a;
+}
+
+.tsd-sector-info {
+  color: var(--text-color);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.tsd-divider {
+  width: 60px;
+  height: 4px;
+  background: var(--button-gradient);
+  margin: 1.5rem auto;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: var(--neon-glow);
+}
+
+.tsd-card:hover .tsd-divider {
+  width: 100px;
+  box-shadow: var(--pulse-glow);
+}
+
+.tsd-empty {
+  text-align: center;
+  color: var(--text-color);
+  font-size: 1.5rem;
+  margin-top: 3rem;
+  padding: 2rem;
+  background: rgba(25, 25, 60, 0.95);
+  border-radius: var(--border-radius);
+  box-shadow: 0 0 15px rgba(0, 0, 255, 0.5);
+}
+
+.tsd-loading,
+.tsd-error {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.tsd-loading-icon {
+  font-size: 3rem;
+  color: var(--highlight-color);
+  margin-bottom: 1rem;
+  animation: spin 1.2s linear infinite;
+  text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+.tsd-error-icon {
+  font-size: 3rem;
+  color: #ff2e63;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 20px rgba(255, 46, 99, 0.8);
+}
+
+.tsd-error-btns {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.tsd-drill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.tsd-drill-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--highlight-color);
+  text-align: center;
+  margin-bottom: 2rem;
+  letter-spacing: 2px;
+  animation: neonText 2s ease-in-out infinite alternate;
+}
+
+.tsd-drill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.tsd-stock-card {
+  background: rgba(25, 25, 60, 0.95);
+  border-radius: var(--border-radius);
+  border: 1px solid rgba(123, 0, 255, 0.3);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.tsd-stock-card:hover {
+  background: rgba(62, 207, 142, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+}
+
+.tsd-stock-symbol {
+  font-size: 1.3rem;
+  color: var(--highlight-color);
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.tsd-stock-info {
+  color: var(--text-color);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.tsd-stock-info strong {
+  color: var(--highlight-color);
+}
+
+@media (max-width: 768px) {
+  .tsd-container {
+    padding: 1rem;
+  }
+  
+  .tsd-title {
+    font-size: 2rem;
+  }
+  
+  .tsd-drill-title {
+    font-size: 1.8rem;
+  }
+  
+  .tsd-card,
+  .tsd-stock-card {
+    padding: 1.5rem;
+  }
+  
+  .tsd-sort-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .tsd-drill-header {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+`;
+  document.head.appendChild(style);
+}
 
 const TrendingSectorsDisplay = () => {
   const [trendingSectors, setTrendingSectors] = useState([]);
@@ -14,74 +391,47 @@ const TrendingSectorsDisplay = () => {
   const [retryCount, setRetryCount] = useState(0);
 
   const navigate = useNavigate();
-
-  // Get the base URL for your Node.js server from environment variables
   const SERVER_URL =
     process.env.REACT_APP_SERVER_URL || "http://localhost:5001";
 
   // Test server connection
   const testServerConnection = async () => {
     try {
-      const response = await axios.get(`${SERVER_URL}/api/health`, {
-        timeout: 5000,
-      });
-      console.log("Server health check:", response.data);
+      await axios.get(`${SERVER_URL}/api/health`, { timeout: 5000 });
       return true;
-    } catch (error) {
-      console.error("Server health check failed:", error.message);
+    } catch {
       return false;
     }
   };
 
-  // Function to fetch trending sectors
+  // Fetch trending sectors
   const fetchTrendingSectors = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log(
-        `Fetching trending sectors from: ${SERVER_URL}/api/trending-sectors?sortBy=${sortBy}`
-      );
-
-      // First test server connection
       const isServerHealthy = await testServerConnection();
       if (!isServerHealthy) {
         throw new Error(
           "Server is not responding. Please check if the server is running."
         );
       }
-
       const response = await axios.get(
         `${SERVER_URL}/api/trending-sectors?sortBy=${sortBy}`,
-        {
-          timeout: 10000, // 10 second timeout
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
+        { timeout: 10000 }
       );
-
-      console.log("API Response:", response.data);
-
       if (!response.data || !Array.isArray(response.data)) {
         throw new Error("Invalid response format from server");
       }
-
       setTrendingSectors(response.data);
-      setRetryCount(0); // Reset retry count on success
+      setRetryCount(0);
     } catch (err) {
-      console.error("Error fetching trending sectors:", err);
-
       let errorMessage = "Failed to load trending sectors. ";
-
       if (
         err.code === "ECONNREFUSED" ||
-        err.message.includes("Network Error")
+        (err.message && err.message.includes("Network Error"))
       ) {
-        errorMessage +=
-          "Cannot connect to server. Please check if the server is running on " +
-          SERVER_URL;
+        errorMessage += `Cannot connect to server. Please check if the server is running on ${SERVER_URL}`;
       } else if (err.response?.status === 404) {
         errorMessage +=
           "API endpoint not found. Please check server configuration.";
@@ -92,7 +442,6 @@ const TrendingSectorsDisplay = () => {
       } else {
         errorMessage += err.message || "Unknown error occurred.";
       }
-
       setError(errorMessage);
       setRetryCount((prev) => prev + 1);
     } finally {
@@ -100,33 +449,20 @@ const TrendingSectorsDisplay = () => {
     }
   };
 
-  // Function to fetch stocks for a specific sector
+  // Fetch stocks for a sector
   const fetchStocksBySector = async (sectorName) => {
     setLoading(true);
     setError(null);
     setSelectedSector(null);
 
     try {
-      console.log(`Fetching stocks for sector: ${sectorName}`);
-
       const response = await axios.get(
         `${SERVER_URL}/api/sectors/${encodeURIComponent(sectorName)}/stocks`,
-        {
-          timeout: 10000,
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
+        { timeout: 10000 }
       );
-
-      console.log("Sector stocks response:", response.data);
       setSelectedSector({ name: sectorName, stocks: response.data });
     } catch (err) {
-      console.error(`Error fetching stocks for sector ${sectorName}:`, err);
-
       let errorMessage = `Failed to load stocks for ${sectorName}. `;
-
       if (err.response?.status === 404) {
         errorMessage += "Sector not found or no stocks available.";
       } else if (err.response?.data?.message) {
@@ -134,7 +470,6 @@ const TrendingSectorsDisplay = () => {
       } else {
         errorMessage += "Please try again later.";
       }
-
       setError(errorMessage);
       setSelectedSector(null);
     } finally {
@@ -142,46 +477,45 @@ const TrendingSectorsDisplay = () => {
     }
   };
 
-  // Fetch trending sectors when component mounts or sortBy changes
   useEffect(() => {
     fetchTrendingSectors();
+    // eslint-disable-next-line
   }, [sortBy]);
 
-  // Handle click on a sector card
-  const handleSectorClick = (sectorName) => {
-    fetchStocksBySector(sectorName);
-  };
-
-  // Handle back button from drilldown view
+  const handleSectorClick = (sectorName) => fetchStocksBySector(sectorName);
   const handleBackToTrending = () => {
     setSelectedSector(null);
     setError(null);
     fetchTrendingSectors();
   };
-
-  // Handle back button to home
-  const handleBackToHome = () => {
-    navigate("/");
-  };
-
-  // Retry with exponential backoff
+  const handleBackToHome = () => navigate("/");
   const handleRetry = () => {
-    const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Max 10 seconds
-    setTimeout(() => {
-      fetchTrendingSectors();
-    }, delay);
+    const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+    setTimeout(fetchTrendingSectors, delay);
   };
 
   // Loading state
   if (loading && !selectedSector) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 mx-auto mb-4 animate-spin text-blue-400" />
-          <p className="text-xl">Loading trending sectors...</p>
-          <p className="text-sm text-gray-400 mt-2">
-            Connecting to {SERVER_URL}
-          </p>
+      <div className="tsd-loading">
+        <FaSyncAlt className="tsd-loading-icon" />
+        <div
+          style={{
+            fontSize: "1.5rem",
+            color: "var(--text-color)",
+            marginBottom: "1rem",
+          }}
+        >
+          Loading trending sectors...
+        </div>
+        <div
+          style={{
+            color: "var(--text-color)",
+            opacity: 0.7,
+            fontSize: "1rem",
+          }}
+        >
+          Connecting to {SERVER_URL}
         </div>
       </div>
     );
@@ -190,27 +524,36 @@ const TrendingSectorsDisplay = () => {
   // Error state
   if (error && !selectedSector) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white p-4">
-        <AlertCircle className="w-16 h-16 text-red-400 mb-4" />
-        <p className="text-xl mb-4 text-center max-w-2xl">{error}</p>
-        <div className="flex gap-4">
-          <button
-            onClick={handleRetry}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-colors flex items-center"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Retry {retryCount > 0 && `(${retryCount})`}
+      <div className="tsd-error">
+        <FaExclamationCircle className="tsd-error-icon" />
+        <div
+          style={{
+            fontSize: "1.5rem",
+            marginBottom: "1rem",
+            color: "var(--text-color)",
+          }}
+        >
+          {error}
+        </div>
+        <div className="tsd-error-btns">
+          <button className="tsd-btn" onClick={handleRetry}>
+            <FaSyncAlt /> Retry {retryCount > 0 && `(${retryCount})`}
           </button>
-          <button
-            onClick={handleBackToHome}
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full transition-colors"
-          >
+          <button className="tsd-btn" onClick={handleBackToHome}>
             Back to Home
           </button>
         </div>
-        <div className="mt-4 text-sm text-gray-400 text-center">
-          <p>Server URL: {SERVER_URL}</p>
-          <p>Make sure the server is running and accessible</p>
+        <div
+          style={{
+            color: "var(--text-color)",
+            opacity: 0.7,
+            marginTop: "1rem",
+            fontSize: "0.95rem",
+          }}
+        >
+          Server URL: {SERVER_URL}
+          <br />
+          Make sure the server is running and accessible
         </div>
       </div>
     );
@@ -219,163 +562,136 @@ const TrendingSectorsDisplay = () => {
   // Drilldown view
   if (selectedSector) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white p-6">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={handleBackToTrending}
-              className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition-colors flex items-center"
-            >
-              <ArrowDown className="w-4 h-4 mr-2 transform rotate-90" />
-              Back to Trending Sectors
-            </button>
-            <button
-              onClick={handleBackToHome}
-              className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition-colors flex items-center"
-            >
-              <ArrowUp className="w-4 h-4 mr-2 transform -rotate-90" />
-              Back to Home
-            </button>
-          </div>
-
-          <h2 className="text-4xl font-bold text-emerald-400 mb-8 text-center">
-            {selectedSector.name} Stocks
-          </h2>
-
-          {loading ? (
-            <div className="text-center text-xl">
-              <RefreshCw className="w-8 h-8 mx-auto mb-4 animate-spin text-blue-400" />
-              Loading stocks for {selectedSector.name}...
-            </div>
-          ) : error ? (
-            <div className="text-center text-red-400 text-xl">{error}</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {selectedSector.stocks.map((stock) => (
-                <div
-                  key={stock.symbol}
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg p-4 hover:bg-white/15 transition-colors"
-                >
-                  <div className="mb-2">
-                    <h3 className="text-xl font-semibold text-blue-300">
-                      {stock.symbol}
-                    </h3>
-                  </div>
-                  <div className="text-sm space-y-1">
-                    <p>
-                      <strong>Last Price:</strong> ₹
-                      {stock.lastPrice ? stock.lastPrice.toFixed(2) : "N/A"}
-                    </p>
-                    <p>
-                      <strong>Volume:</strong>{" "}
-                      {stock.volume ? stock.volume.toLocaleString() : "N/A"}
-                    </p>
-                    <p>
-                      <strong>Resistance:</strong> ₹
-                      {stock.resistance ? stock.resistance.toFixed(2) : "N/A"}
-                    </p>
-                    <p>
-                      <strong>Support:</strong> ₹
-                      {stock.support ? stock.support.toFixed(2) : "N/A"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="tsd-container">
+        <div className="tsd-drill-header">
+          <button className="tsd-btn" onClick={handleBackToTrending}>
+            <FaArrowDown style={{ transform: "rotate(90deg)" }} /> Back to
+            Trending Sectors
+          </button>
+          <button className="tsd-btn" onClick={handleBackToHome}>
+            <FaArrowUp style={{ transform: "rotate(-90deg)" }} /> Back to Home
+          </button>
         </div>
+        <div className="tsd-drill-title">{selectedSector.name} Stocks</div>
+        {loading ? (
+          <div
+            style={{
+              textAlign: "center",
+              fontSize: "1.2rem",
+              color: "var(--text-color)",
+            }}
+          >
+            <FaSyncAlt className="tsd-loading-icon" />
+            Loading stocks for {selectedSector.name}...
+          </div>
+        ) : error ? (
+          <div
+            style={{
+              color: "#ff2e63",
+              textAlign: "center",
+              fontSize: "1.1rem",
+              padding: "2rem",
+              background: "rgba(255, 46, 99, 0.1)",
+              borderRadius: "var(--border-radius)",
+              border: "1px solid rgba(255, 46, 99, 0.3)",
+            }}
+          >
+            {error}
+          </div>
+        ) : (
+          <div className="tsd-drill-grid">
+            {selectedSector.stocks.map((stock) => (
+              <div key={stock.symbol} className="tsd-stock-card">
+                <div className="tsd-stock-symbol">{stock.symbol}</div>
+                <div className="tsd-stock-info">
+                  <strong>Last Price:</strong> ₹
+                  {stock.lastPrice ? stock.lastPrice.toFixed(2) : "N/A"}
+                </div>
+                <div className="tsd-stock-info">
+                  <strong>Volume:</strong>{" "}
+                  {stock.volume ? stock.volume.toLocaleString() : "N/A"}
+                </div>
+                <div className="tsd-stock-info">
+                  <strong>Resistance:</strong> ₹
+                  {stock.resistance ? stock.resistance.toFixed(2) : "N/A"}
+                </div>
+                <div className="tsd-stock-info">
+                  <strong>Support:</strong> ₹
+                  {stock.support ? stock.support.toFixed(2) : "N/A"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
 
   // Main trending sectors view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white p-6">
-      <div className="container mx-auto max-w-6xl">
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={handleBackToHome}
-            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition-colors flex items-center"
+    <div className="tsd-container">
+      <div className="tsd-header">
+        <button className="tsd-btn" onClick={handleBackToHome}>
+          <FaArrowUp style={{ transform: "rotate(-90deg)" }} /> Back to Home
+        </button>
+      </div>
+      <div className="tsd-title">
+        Trending <span className="accent">Sectors</span> 📈
+      </div>
+      <div className="tsd-sort-row">
+        <button
+          className={`tsd-sort-btn${sortBy === "volume" ? " active" : ""}`}
+          onClick={() => setSortBy("volume")}
+        >
+          Sort by Volume
+        </button>
+        <button
+          className={`tsd-sort-btn${sortBy === "price" ? " active" : ""}`}
+          onClick={() => setSortBy("price")}
+        >
+          Sort by Price
+        </button>
+      </div>
+      {trendingSectors.length === 0 && !loading && !error && (
+        <div className="tsd-empty">No trending sectors found. 😔</div>
+      )}
+      <div className="tsd-grid">
+        {trendingSectors.map((sector) => (
+          <div
+            key={sector.name}
+            className="tsd-card"
+            onClick={() => handleSectorClick(sector.name)}
           >
-            <ArrowUp className="w-4 h-4 mr-2 transform -rotate-90" />
-            Back to Home
-          </button>
-        </div>
-
-        <h2 className="text-4xl md:text-5xl font-bold text-center text-white mb-8">
-          Trending <span className="text-blue-400">Sectors</span> 📈
-        </h2>
-
-        <div className="flex justify-center gap-4 mb-8">
-          <button
-            onClick={() => setSortBy("volume")}
-            className={`px-6 py-2 rounded-full font-semibold transition-all ${
-              sortBy === "volume"
-                ? "bg-emerald-500 text-white shadow-lg"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-          >
-            Sort by Volume
-          </button>
-          <button
-            onClick={() => setSortBy("price")}
-            className={`px-6 py-2 rounded-full font-semibold transition-all ${
-              sortBy === "price"
-                ? "bg-emerald-500 text-white shadow-lg"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-          >
-            Sort by Price
-          </button>
-        </div>
-
-        {trendingSectors.length === 0 && !loading && !error && (
-          <p className="text-center text-xl text-gray-400">
-            No trending sectors found. 😔
-          </p>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trendingSectors.map((sector) => (
-            <div
-              key={sector.name}
-              className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/15 rounded-lg"
-              onClick={() => handleSectorClick(sector.name)}
-            >
-              <div className="p-6 text-center">
-                <h3 className="text-2xl font-bold text-blue-300 group-hover:text-emerald-300 transition-colors mb-2">
-                  {sector.name}
-                </h3>
-                <div className="text-sm space-y-1">
-                  <p className="text-blue-100">
-                    Avg. Volume:{" "}
-                    <span className="font-semibold">
-                      {sector.averageVolume
-                        ? sector.averageVolume.toLocaleString()
-                        : "N/A"}
-                    </span>
-                  </p>
-                  <p className="text-blue-100">
-                    Avg. Price:{" "}
-                    <span className="font-semibold">
-                      ₹
-                      {sector.averagePrice
-                        ? sector.averagePrice.toFixed(2)
-                        : "N/A"}
-                    </span>
-                  </p>
-                  <p className="text-blue-100">
-                    Total Stocks:{" "}
-                    <span className="font-semibold">{sector.stockCount}</span>
-                  </p>
-                  <div className="mt-4 flex justify-center">
-                    <div className="w-0 group-hover:w-16 h-0.5 bg-gradient-to-r from-blue-400 to-emerald-400 transition-all duration-300"></div>
-                  </div>
-                </div>
-              </div>
+            <div className="tsd-sector-title">{sector.name}</div>
+            <div className="tsd-sector-info">
+              Avg. Volume:{" "}
+              <span
+                style={{ color: "var(--highlight-color)", fontWeight: "600" }}
+              >
+                {sector.averageVolume
+                  ? sector.averageVolume.toLocaleString()
+                  : "N/A"}
+              </span>
             </div>
-          ))}
-        </div>
+            <div className="tsd-sector-info">
+              Avg. Price:{" "}
+              <span
+                style={{ color: "var(--highlight-color)", fontWeight: "600" }}
+              >
+                ₹{sector.averagePrice ? sector.averagePrice.toFixed(2) : "N/A"}
+              </span>
+            </div>
+            <div className="tsd-sector-info">
+              Total Stocks:{" "}
+              <span
+                style={{ color: "var(--highlight-color)", fontWeight: "600" }}
+              >
+                {sector.stockCount}
+              </span>
+            </div>
+            <div className="tsd-divider"></div>
+          </div>
+        ))}
       </div>
     </div>
   );
