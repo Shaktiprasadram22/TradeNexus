@@ -21,7 +21,7 @@ router.get("/stocks", async (req, res) => {
   try {
     const response = await axios.get(`${API_BASE}/stocks`);
     res.json(response.data);
-  } catch (err) {
+  } catch (err) { 
     console.error("Error in /api/stocks:", err.message);
     res.status(500).json({ message: "Failed to fetch stocks" });
   }
